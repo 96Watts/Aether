@@ -46,8 +46,8 @@ h2 em, h1 em { color: var(--sage); font-family: var(--serif); font-weight: 500; 
 .preview-line.active { width: 82%; background: #465743; }
 .preview-line.short { width: 64%; }
 .preview-line.nested { width: 74%; margin-left: 14px; }
-.preview-folder { margin: 28px 0 17px; color: var(--muted); font-size: 9px; }
-.preview-folder b { margin-right: 5px; color: var(--sage); font-weight: 400; }
+.preview-folder { display: flex; align-items: center; gap: 7px; margin: 28px 0 17px; color: var(--muted); font-size: 9px; }
+.preview-chevron { width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; color: var(--sage); transform: rotate(45deg) translateY(-1px); }
 .preview-chat { display: flex; flex-direction: column; padding: 20px 22px 18px; }
 .preview-chat-top { display: flex; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: var(--soft, #c7cec6); font-size: 10px; }
 .preview-chat-top i { color: var(--sage-dark); font-size: 9px; font-style: normal; }
