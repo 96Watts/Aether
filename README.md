@@ -6,6 +6,9 @@ Aether is a focused desktop AI client built with **React, TypeScript, Vite, Taur
 
 > Aether is the user-facing name. The internal Tauri application identifier is `aiinterface`.
 
+> **[Visit the Aether website →](https://96watts.github.io/Aethers/)**<br>
+> Download Aether, view installation options, and learn more about the workspace.
+
 ## Features
 
 - Use local Ollama models or cloud-based AI services
@@ -68,6 +71,14 @@ irm https://github.com/96Watts/Aether/releases/latest/download/install-release.p
 ```
 
 The installer downloads the official x64 installer over HTTPS and verifies its SHA-256 checksum before launching it.
+
+## Aether Website
+
+The public website is maintained separately from the application source:
+
+**[96watts.github.io/Aethers](https://96watts.github.io/Aethers/)**
+
+It contains the Aether overview, Windows download link, PowerShell installation command, privacy information, and supported installation options.
 
 ## Updates and Releases
 
