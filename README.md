@@ -57,7 +57,7 @@ Conversation and settings files are readable local files. They are not encrypted
 
 ## Windows Support
 
-The current release targets **Windows x64**. The recommended distribution is the Tauri NSIS installer:
+The application currently targets **Windows x64**. The recommended distribution is the Tauri NSIS installer:
 
 ```text
 Aether_1.1.0_x64-setup.exe
@@ -69,7 +69,9 @@ There is currently no published macOS, Linux, ARM64, or mobile release workflow.
 
 ## Installation
 
-Download the latest Windows installer from the [Aether GitHub Releases](https://github.com/96Watts/Aether/releases) page, run the `Aether_<version>_x64-setup.exe` file, and follow the installation prompts.
+After a release has been published, download the latest Windows installer from the [Aether GitHub Releases](https://github.com/96Watts/Aether/releases) page. Run the `Aether_<version>_x64-setup.exe` file and follow the installation prompts.
+
+The repository does not currently have a published release, so the download links will become active after the first signed release is created.
 
 After a release containing `install-release.ps1` has been published, Windows PowerShell users can install the latest release with:
 
@@ -79,75 +81,9 @@ irm https://github.com/96Watts/Aether/releases/latest/download/install-release.p
 
 The installer script downloads the official x64 installer from this repository and verifies its SHA-256 checksum before launching it.
 
-## Development
-
-### Requirements
-
-Development requires:
-
-- Node.js
-- pnpm
-- Rust and Cargo
-- Tauri 2 Windows prerequisites
-- WebView2 on Windows
-
-### Install dependencies
-
-```powershell
-pnpm install
-```
-
-### Start the frontend
-
-```powershell
-pnpm dev
-```
-
-### Start Aether in development mode
-
-```powershell
-pnpm tauri dev
-```
-
-### Build the frontend
-
-```powershell
-pnpm build
-```
-
-### Build the Windows application and installers
-
-```powershell
-pnpm tauri build
-```
-
-The Tauri build runs the frontend build automatically and writes release outputs below `src-tauri/target/release/`.
-
-### Run checks
-
-```powershell
-cargo check --manifest-path src-tauri/Cargo.toml
-cargo test --manifest-path src-tauri/Cargo.toml
-node src/conversationState.test.mjs
-```
-
-## Build Outputs
-
-The current version is **1.1.0**. A production build produces:
-
-```text
-src-tauri/target/release/aiinterface.exe
-src-tauri/target/release/bundle/nsis/Aether_1.1.0_x64-setup.exe
-src-tauri/target/release/bundle/msi/Aether_1.1.0_x64_en-US.msi
-```
-
-The NSIS installer is the recommended file for normal Windows distribution. The MSI is available for environments that require MSI deployment.
-
-Frontend assets are written to `dist/` with content-hashed filenames that may change between builds.
-
 ## Updates and Releases
 
-Aether uses Tauri's official updater infrastructure. Production updater configuration requires a public signing key and an HTTPS GitHub Releases endpoint. Private signing keys must remain in GitHub Actions secrets.
+Aether uses Tauri's official updater infrastructure. Production updater configuration requires a public signing key and an HTTPS GitHub Releases endpoint. Private signing keys must remain in GitHub Actions secrets. The current application version is **1.1.0**.
 
 The updater endpoint is:
 
