@@ -5,7 +5,9 @@ import {
   applyOwnedStreamEvent,
   buildContextMessages,
   contextSizeToTokens,
+  hasActiveRequestForConversation,
   removeOwnedTurn,
+  rollbackOwnedTurn,
   replaceEditedUserBranch,
   shouldHydrateConversation,
   stopOwnedTurn,
@@ -98,6 +100,56 @@ test("stopping removes only the assistant while keeping the user visible and exc
   assert.equal(stopped.messages[0].contextExcluded, true);
   assert.deepEqual(buildContextMessages(stopped.messages, 100), []);
   assert.equal(state.find((conversation) => conversation.id === "B").messages.length, 2);
+});
+
+test("rolling back a failed generation keeps the user message", () => {
+  const state = rollbackOwnedTurn(conversations(), ownershipA);
+  const conversation = state.find((item) => item.id === "A");
+  assert.deepEqual(conversation.messages.map((message) => message.content), ["question"]);
+  assert.deepEqual(buildContextMessages(conversation.messages, 100).map((message) => message.content), ["question"]);
+});
+
+test("the next message after failure shares one generation context without merging users", () => {
+  const failed = rollbackOwnedTurn([{
+    id: "A",
+    updatedAt: 1,
+    messages: [
+      { id: "user-1", role: "user", content: "Hello" },
+      { id: "assistant-1", role: "assistant", content: "" },
+    ],
+  }], ownershipA);
+  const nextMessages = [...failed[0].messages, { id: "user-2", role: "user", content: "How are you?" }];
+  const context = buildContextMessages(nextMessages, 100);
+  assert.deepEqual(context.map((message) => message.role), ["user", "user"]);
+  assert.deepEqual(context.map((message) => message.content), ["Hello", "How are you?"]);
+});
+
+test("multiple messages after failure remain separate in one generation context", () => {
+  const messages = [
+    { id: "user-1", role: "user", content: "Hello" },
+    { id: "user-2", role: "user", content: "Is Ollama working now?" },
+    { id: "user-3", role: "user", content: "Please retry" },
+  ];
+  const context = buildContextMessages(messages, 100);
+  assert.deepEqual(context.map((message) => message.content), messages.map((message) => message.content));
+  assert.equal(context.every((message) => message.role === "user"), true);
+});
+
+test("a successful assistant response remains a boundary for the next turn", () => {
+  const messages = [
+    { id: "user-1", role: "user", content: "Hello" },
+    { id: "assistant-1", role: "assistant", content: "Hi!" },
+    { id: "user-2", role: "user", content: "How are you?" },
+  ];
+  const next = appendAssistantPlaceholder(messages, "assistant-2", 2);
+  assert.deepEqual(next.map((message) => message.role), ["user", "assistant", "user", "assistant"]);
+  assert.equal(next.filter((message) => message.role === "assistant").length, 2);
+});
+
+test("an active request remains distinct from a failed request", () => {
+  const requests = new Map([["request-A", ownershipA]]);
+  assert.equal(hasActiveRequestForConversation(requests, "A"), true);
+  assert.equal(hasActiveRequestForConversation(new Map(), "A"), false);
 });
 
 test("stopping the latest turn preserves earlier completed context", () => {

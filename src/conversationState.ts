@@ -87,6 +87,13 @@ export function removeOwnedTurn<C extends ConversationState>(conversations: C[],
   } : conversation) as C[];
 }
 
+export function rollbackOwnedTurn<C extends ConversationState>(conversations: C[], ownership: RequestOwnership): C[] {
+  return conversations.map((conversation) => conversation.id === ownership.conversationId ? {
+    ...conversation,
+    messages: conversation.messages.filter((message) => message.id !== ownership.assistantMessageId),
+  } : conversation) as C[];
+}
+
 export function stopOwnedTurn<C extends ConversationState>(conversations: C[], ownership: RequestOwnership): C[] {
   return conversations.map((conversation) => conversation.id === ownership.conversationId ? {
     ...conversation,

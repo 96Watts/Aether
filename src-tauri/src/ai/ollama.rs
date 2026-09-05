@@ -10,7 +10,10 @@ use super::client::{AiCapabilities, AiClient, AiMessage, AiRequest, AiResponse, 
 use crate::errors::BackendError;
 
 const DEFAULT_ENDPOINT: &str = "http://127.0.0.1:11434";
-const STREAM_READ_TIMEOUT: Duration = Duration::from_millis(100);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+const STREAM_REQUEST_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+const STREAM_READ_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub struct OllamaClient {
     agent: ureq::Agent,
@@ -22,11 +25,14 @@ impl Default for OllamaClient {
     fn default() -> Self {
         Self {
             agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(120))
+                .timeout_connect(CONNECT_TIMEOUT)
+                .timeout_read(REQUEST_TIMEOUT)
+                .timeout(REQUEST_TIMEOUT)
                 .build(),
             stream_agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(120))
+                .timeout_connect(CONNECT_TIMEOUT)
                 .timeout_read(STREAM_READ_TIMEOUT)
+                .timeout(STREAM_REQUEST_TIMEOUT)
                 .build(),
             endpoint: DEFAULT_ENDPOINT.to_string(),
         }
@@ -78,6 +84,9 @@ fn request_error(error: ureq::Error) -> BackendError {
     match error {
         ureq::Error::Status(status, _) if status == 401 || status == 403 => {
             BackendError::ai("authentication_failed", "Ollama rejected the request")
+        }
+        ureq::Error::Status(404, _) => {
+            BackendError::ai("model_unavailable", "Ollama could not find the selected model")
         }
         ureq::Error::Status(_, _) => BackendError::ai("provider_error", "Ollama returned an error"),
         ureq::Error::Transport(_) => {
@@ -160,6 +169,7 @@ impl AiClient for OllamaClient {
             .map_err(request_error)?;
         let mut reader = BufReader::new(response.into_reader());
         let mut line = String::new();
+        let mut emitted_content = false;
         loop {
             if cancelled() {
                 return Err(BackendError::ai(
@@ -176,7 +186,11 @@ impl AiClient for OllamaClient {
             if read == 0 {
                 break;
             }
-            let payload: OllamaResponse = serde_json::from_str(line.trim()).map_err(|_| {
+            let payload = line.trim();
+            if payload.is_empty() {
+                continue;
+            }
+            let payload: OllamaResponse = serde_json::from_str(payload).map_err(|_| {
                 BackendError::ai("provider_error", "Ollama returned invalid stream data")
             })?;
             if let Some(error) = payload.error {
@@ -189,9 +203,16 @@ impl AiClient for OllamaClient {
                     }
                 }
                 if !message.content.is_empty() {
+                    emitted_content = true;
                     on_chunk(&message.content, AiStreamKind::Response)?;
                 }
             }
+        }
+        if !emitted_content {
+            return Err(BackendError::ai(
+                "provider_error",
+                "Ollama ended the stream without a response",
+            ));
         }
         Ok(())
     }

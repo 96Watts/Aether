@@ -8,7 +8,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { IconPicker, IconName, FOLDER_ICONS } from "./components/IconPicker";
 import { UIIcons } from "./components/UIIcons";
-import { appendAssistantPlaceholder, applyOwnedStreamEvent, buildContextMessages, contextSizeToTokens, hasActiveRequestForConversation, replaceEditedUserBranch, shouldHydrateConversation, stopOwnedTurn, type RequestOwnership } from "./conversationState";
+import { appendAssistantPlaceholder, applyOwnedStreamEvent, buildContextMessages, contextSizeToTokens, hasActiveRequestForConversation, replaceEditedUserBranch, rollbackOwnedTurn, shouldHydrateConversation, stopOwnedTurn, type RequestOwnership } from "./conversationState";
 import packageJson from "../package.json";
 import "./App.css";
 
@@ -499,7 +499,7 @@ function MessageAction({ label, onClick, children, active = false }: { label: st
   return <button className={`message-action ${active ? "active" : ""}`} type="button" onClick={onClick} aria-label={label} title={label}>{children}<span>{label}</span></button>;
 }
 
-function UserMessageContent({ content, onSave, notify }: { content: string; onSave: (content: string) => void; notify: (notification: NotificationInput) => void }) {
+function UserMessageContent({ content, onSave, notify, showCopy = true }: { content: string; onSave: (content: string) => void; notify: (notification: NotificationInput) => void; showCopy?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
   const [copied, setCopied] = useState(false);
@@ -515,22 +515,22 @@ function UserMessageContent({ content, onSave, notify }: { content: string; onSa
   };
 
   if (editing) {
-    return <>
+    return <div className="user-message-entry">
       <textarea className="message-edit-input" value={draft} onChange={(event) => setDraft(event.target.value)} autoFocus aria-label="Edit question" />
       <div className="message-actions user-actions edit-actions">
         <MessageAction label="Cancel" onClick={() => { setDraft(content); setEditing(false); }}><UIIcons.close size={13} strokeWidth={1.7} /></MessageAction>
         <MessageAction label="Save" onClick={() => { const next = draft.trim(); if (!next) return; onSave(next); setEditing(false); }}><UIIcons.check size={13} strokeWidth={1.7} /></MessageAction>
       </div>
-    </>;
+    </div>;
   }
 
-  return <>
+  return <div className="user-message-entry">
     <p>{content}</p>
     <div className="message-actions user-actions">
       <MessageAction label="Edit" onClick={() => { setDraft(content); setEditing(true); }}><UIIcons.edit size={13} strokeWidth={1.7} /></MessageAction>
-      <MessageAction label={copied ? "Copied" : "Copy question"} onClick={() => void copy()} active={copied}><UIIcons.copy size={13} strokeWidth={1.7} /></MessageAction>
+      {showCopy && <MessageAction label={copied ? "Copied" : "Copy question"} onClick={() => void copy()} active={copied}><UIIcons.copy size={13} strokeWidth={1.7} /></MessageAction>}
     </div>
-  </>;
+  </div>;
 }
 
 function AssistantMessageActions({ content, isApiModel, onRetry, notify }: { content: string; isApiModel: boolean; onRetry: () => void; notify: (notification: NotificationInput) => void }) {
@@ -584,20 +584,31 @@ function AssistantMessageActions({ content, isApiModel, onRetry, notify }: { con
 }
 
 const MessageList = memo(forwardRef<HTMLDivElement, { messages: Message[]; modelName: string; messageWidth: SettingsState["messageWidth"]; markdown: SettingsState["markdown"]; showTimestamps: boolean; showReasoning: boolean; isGenerating: boolean; notify: (notification: NotificationInput) => void; onSaveEdit: (index: number, content: string) => void; onRetry: (index: number) => void }>(function MessageList({ messages, modelName, messageWidth, markdown, showTimestamps, showReasoning, isGenerating, notify, onSaveEdit, onRetry }, ref) {
+  const groups: Array<Array<{ message: Message; index: number }>> = [];
+  messages.forEach((message, index) => {
+    const previous = messages[index - 1];
+    const canGroup = message.role === "user" && !message.contextExcluded && previous?.role === "user" && !previous.contextExcluded;
+    if (canGroup && groups[groups.length - 1]?.[0].message.role === "user") groups[groups.length - 1].push({ message, index });
+    else groups.push([{ message, index }]);
+  });
+
   return <div className={`message-list message-width-${messageWidth}`} ref={ref}>
-    {messages.map((message, index) => (
-      <article className={`message ${message.role}`} key={message.id ?? `${message.role}-${index}`}>
+    {groups.map((group) => {
+      const first = group[0];
+      const last = group[group.length - 1];
+      const isUserGroup = first.message.role === "user";
+      return <article className={`message ${first.message.role} ${isUserGroup && group.length > 1 ? "message-group" : ""}`} key={first.message.id ?? `${first.message.role}-${first.index}`}>
         <div className="message-body">
-          <span className="message-role">{message.role === "user" ? "ME" : modelName}{showTimestamps && <time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</span>
-          {message.role === "assistant" && message.reasoning && showReasoning && <ReasoningPanel content={message.reasoning} isGenerating={isGenerating && index === messages.length - 1} />}
-          {message.role === "assistant" && !message.content && isGenerating && (!message.reasoning || !showReasoning) && <div className="thinking-dots" aria-label="Thinking"><span>•</span><span>•</span><span>•</span></div>}
-          {message.role === "user" ? <UserMessageContent content={message.content} onSave={(content) => onSaveEdit(index, content)} notify={notify} /> : <>
+          <span className="message-role">{isUserGroup ? "ME" : modelName}{showTimestamps && <time>{new Date(last.message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>}</span>
+          {group.map(({ message, index }) => message.role === "user" ? <UserMessageContent key={message.id ?? `user-${index}`} content={message.content} onSave={(content) => onSaveEdit(index, content)} notify={notify} showCopy={index === last.index} /> : <div key={message.id ?? `assistant-${index}`}>
+            {message.reasoning && showReasoning && <ReasoningPanel content={message.reasoning} isGenerating={isGenerating && index === messages.length - 1} />}
+            {!message.content && isGenerating && (!message.reasoning || !showReasoning) && <div className="thinking-dots" aria-label="Thinking"><span>•</span><span>•</span><span>•</span></div>}
             <p className={markdown === "plain" ? "plain-text" : ""}>{message.content}</p>
             {message.content && <AssistantMessageActions content={message.content} isApiModel={message.modelType === "API"} onRetry={() => onRetry(index)} notify={notify} />}
-          </>}
+          </div>)}
         </div>
-      </article>
-    ))}
+      </article>;
+    })}
   </div>;
 }));
 
@@ -695,6 +706,7 @@ function AppContent() {
   const skipConversationsSaveRef = useRef(false);
   const persistedConversationsRef = useRef<Map<string, Conversation>>(new Map());
   const pathValidationSequenceRef = useRef(0);
+  const streamListenerReadyRef = useRef<Promise<void>>(Promise.resolve());
   const requestOwnershipRef = useRef<Map<string, RequestOwnership>>(new Map());
   const cancelledRequestIdsRef = useRef<Set<string>>(new Set());
   const cancelledTurnSnapshotsRef = useRef<Map<string, Conversation>>(new Map());
@@ -857,7 +869,7 @@ function AppContent() {
 
   useEffect(() => {
     let disposed = false;
-    const unlisten = listen<AiStreamEvent>("ai://stream", ({ payload }) => {
+    const listener = listen<AiStreamEvent>("ai://stream", ({ payload }) => {
       if (disposed) return;
       const ownership = requestOwnershipRef.current.get(payload.requestId);
       if (!ownership) return;
@@ -874,14 +886,17 @@ function AppContent() {
         next.delete(ownership.conversationId);
         return next;
       });
-      setConversations((current) => current.map((conversation) => conversation.id === ownership.conversationId ? { ...conversation, updatedAt: Date.now() } : conversation));
       if (payload.kind === "error" && !wasCancelled) {
+        setConversations((current) => rollbackOwnedTurn(current, ownership).map((conversation) => conversation.id === ownership.conversationId ? { ...conversation, updatedAt: Date.now() } : conversation));
         notify({ kind: "error", title: "Generation failed", description: payload.detail ?? "The AI runtime could not complete the request." });
+      } else {
+        setConversations((current) => current.map((conversation) => conversation.id === ownership.conversationId ? { ...conversation, updatedAt: Date.now() } : conversation));
       }
-    }).catch(() => undefined);
+    });
+    streamListenerReadyRef.current = listener.then(() => undefined, () => undefined);
     return () => {
       disposed = true;
-      void unlisten.then((cleanup) => cleanup?.());
+      void listener.then((cleanup) => cleanup?.(), () => undefined);
     };
   }, [notify]);
 
@@ -994,9 +1009,12 @@ function AppContent() {
   useEffect(() => {
     if (systemInfoLoadStartedRef.current) return;
     systemInfoLoadStartedRef.current = true;
-    void invoke<SystemInfoSnapshot>("get_system_info")
-      .then((snapshot) => { setSystemInfo(snapshot); setSystemInfoStatus("ready"); })
-      .catch(() => { setSystemInfoStatus("error"); notify(describeBackendError("systeminfo")); });
+    const timer = window.setTimeout(() => {
+      void invoke<SystemInfoSnapshot>("get_system_info")
+        .then((snapshot) => { setSystemInfo(snapshot); setSystemInfoStatus("ready"); })
+        .catch(() => { setSystemInfoStatus("error"); notify(describeBackendError("systeminfo")); });
+    }, 250);
+    return () => window.clearTimeout(timer);
   }, [notify]);
 
   const checkForUpdates = useCallback(async (manual = false) => {
@@ -1034,7 +1052,8 @@ function AppContent() {
     void getVersion().then(setAppVersion).catch(() => undefined);
     if (updateCheckStartedRef.current) return;
     updateCheckStartedRef.current = true;
-    void checkForUpdates();
+    const timer = window.setTimeout(() => { void checkForUpdates(); }, 1500);
+    return () => window.clearTimeout(timer);
   }, [checkForUpdates]);
 
   useEffect(() => {
@@ -1245,7 +1264,23 @@ function AppContent() {
     }));
   }
 
+  function cancelConversationRequests(conversationIds: Set<string>) {
+    for (const [requestId, ownership] of requestOwnershipRef.current) {
+      if (!conversationIds.has(ownership.conversationId)) continue;
+      cancelledRequestIdsRef.current.delete(requestId);
+      cancelledTurnSnapshotsRef.current.delete(requestId);
+      requestOwnershipRef.current.delete(requestId);
+      void invoke<boolean>("cancel_message", { requestId }).catch(() => undefined);
+    }
+    setGeneratingConversationIds((current) => {
+      const next = new Set(current);
+      for (const conversationId of conversationIds) next.delete(conversationId);
+      return next;
+    });
+  }
+
   function deleteConversation(conversationId: string) {
+    cancelConversationRequests(new Set([conversationId]));
     setConversations((current) => current.filter((conversation) => conversation.id !== conversationId));
     setFolders((current) => current.map((folder) => ({ ...folder, conversationIds: folder.conversationIds.filter((id) => id !== conversationId) })));
     if (activeConversationId === conversationId) setActiveConversationId(conversations.find((conversation) => conversation.id !== conversationId)?.id ?? "");
@@ -1264,6 +1299,7 @@ function AppContent() {
 
   function removeFolderPermanently(folderId: string) {
     const deletedIds = conversations.filter((conversation) => conversation.folderId === folderId).map((conversation) => conversation.id);
+    cancelConversationRequests(new Set(deletedIds));
     setFolders((current) => current.filter((folder) => folder.id !== folderId));
     setConversations((current) => current.filter((conversation) => conversation.folderId !== folderId));
     if (deletedIds.includes(activeConversationId)) {
@@ -1481,23 +1517,33 @@ function AppContent() {
     followScrollRef.current = true;
     setGeneratingConversationIds((current) => new Set(current).add(conversationId));
 
-    setConversations((current) => current.map((conversation) => conversation.id === conversationId ? {
-      ...conversation,
-      title: title ?? conversation.title,
-      updatedAt: createdAt,
-      messages: appendAssistantPlaceholder(generationMessages, assistantMessageId, createdAt, { modelType: selectedModel.type }),
-    } : conversation));
+    setConversations((current) => {
+      const nextConversation = {
+        id: conversationId,
+        title: title ?? "New conversation",
+        messages: appendAssistantPlaceholder(generationMessages, assistantMessageId, createdAt, { modelType: selectedModel.type }),
+        createdAt,
+        updatedAt: createdAt,
+      };
+      return current.some((conversation) => conversation.id === conversationId)
+        ? current.map((conversation) => conversation.id === conversationId ? { ...conversation, ...nextConversation, folderId: conversation.folderId } : conversation)
+        : [nextConversation, ...current];
+    });
 
-    void invoke("stream_message", {
-      request: {
-        requestId,
-        provider: selectedModel.type === "API" ? (selectedModel.providerId ?? provider?.id ?? "openai") : "ollama",
-        model: selectedModel.id,
-        providerConfig: provider ? { id: provider.id, baseUrl: provider.baseUrl } : undefined,
-        contextSize: contextLimit,
-        messages: contextMessages.map(({ role, content: messageContent }) => ({ role, content: messageContent })),
-      },
-    }).catch(() => {
+    void (async () => {
+      try {
+        await streamListenerReadyRef.current;
+        await invoke("stream_message", {
+          request: {
+            requestId,
+            provider: selectedModel.type === "API" ? (selectedModel.providerId ?? provider?.id ?? "openai") : "ollama",
+            model: selectedModel.id,
+            providerConfig: provider ? { id: provider.id, baseUrl: provider.baseUrl } : undefined,
+            contextSize: contextLimit,
+            messages: contextMessages.map(({ role, content: messageContent }) => ({ role, content: messageContent })),
+          },
+        });
+      } catch {
       const ownership = requestOwnershipRef.current.get(requestId);
       if (!ownership) return;
       requestOwnershipRef.current.delete(requestId);
@@ -1506,8 +1552,10 @@ function AppContent() {
         next.delete(ownership.conversationId);
         return next;
       });
+      setConversations((current) => rollbackOwnedTurn(current, ownership));
       notify({ kind: "error", title: "Generation failed", description: "The selected AI provider could not complete the request." });
-    });
+      }
+    })();
     return true;
   }, [markConversationChanged, selectedModel, settings.contextSize, notify, providers]);
 
@@ -1515,10 +1563,13 @@ function AppContent() {
     const content = draftContent.trim();
     if (!content) return false;
     const conversation = conversations.find((item) => item.id === activeConversationId);
-    if (!conversation) return false;
     const createdAt = Date.now();
     const userMessage = { id: `message-${Date.now()}-${Math.random().toString(36).slice(2)}`, role: "user" as const, content, createdAt };
-    return startGeneration([...conversation.messages, userMessage], activeConversationId, conversation.messages.length === 0 ? titleFromPrompt(content) : conversation.title);
+    if (conversation) return startGeneration([...conversation.messages, userMessage], activeConversationId, conversation.messages.length === 0 ? titleFromPrompt(content) : conversation.title);
+    const conversationId = `conversation-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const started = startGeneration([userMessage], conversationId, titleFromPrompt(content));
+    if (started) setActiveConversationId(conversationId);
+    return started;
   }, [activeConversationId, conversations, startGeneration]);
 
   const saveEditedQuestion = useCallback((index: number, content: string) => {
@@ -1567,7 +1618,14 @@ function AppContent() {
       cancelledTurnSnapshotsRef.current.delete(requestId);
     };
     void invoke<boolean>("cancel_message", { requestId }).then((cancelled) => {
-      if (cancelled || !requestOwnershipRef.current.has(requestId)) return;
+      if (cancelled) {
+        requestOwnershipRef.current.delete(requestId);
+        cancelledRequestIdsRef.current.delete(requestId);
+        cancelledTurnSnapshotsRef.current.delete(requestId);
+        setConversations((current) => current.map((conversation) => conversation.id === ownership.conversationId ? { ...conversation, updatedAt: Date.now() } : conversation));
+        return;
+      }
+      if (!requestOwnershipRef.current.has(requestId)) return;
       cancelledRequestIdsRef.current.delete(requestId);
       restoreIfCancellationFails();
       setGeneratingConversationIds((current) => new Set(current).add(ownership.conversationId));

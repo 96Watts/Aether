@@ -2,7 +2,7 @@ use crate::errors::BackendError;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize)]
@@ -141,6 +141,31 @@ fn ollama_model_context_length(name: &str) -> Option<u32> {
         .and_then(|value| u32::try_from(value).ok())
 }
 
+fn ollama_model_context_lengths(names: &[String]) -> Vec<Option<u32>> {
+    const MAX_METADATA_WORKERS: usize = 4;
+    let results = Arc::new(Mutex::new(vec![None; names.len()]));
+
+    std::thread::scope(|scope| {
+        for start in (0..names.len()).step_by(MAX_METADATA_WORKERS) {
+            let end = (start + MAX_METADATA_WORKERS).min(names.len());
+            let results = Arc::clone(&results);
+            scope.spawn(move || {
+                for index in start..end {
+                    let context_length = ollama_model_context_length(&names[index]);
+                    if let Ok(mut results) = results.lock() {
+                        results[index] = context_length;
+                    }
+                }
+            });
+        }
+    });
+
+    Arc::try_unwrap(results)
+        .ok()
+        .and_then(|results| results.into_inner().ok())
+        .unwrap_or_else(|| vec![None; names.len()])
+}
+
 fn detect_ollama() -> RuntimeStatus {
     #[cfg(debug_assertions)]
     let started = Instant::now();
@@ -151,12 +176,17 @@ fn detect_ollama() -> RuntimeStatus {
     };
 
     let (available, detail, models) = match server_models {
-        Some(Ok(tags)) => (
-            true,
-            "Running".to_string(),
-            tags.models
-                .into_iter()
-                .map(|tag| LocalModelInfo {
+        Some(Ok(tags)) => {
+            let context_lengths = ollama_model_context_lengths(
+                &tags.models.iter().map(|tag| tag.name.clone()).collect::<Vec<_>>(),
+            );
+            (
+                true,
+                "Running".to_string(),
+                tags.models
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, tag)| LocalModelInfo {
                     id: format!("ollama:{}", tag.name),
                     name: tag.name.clone(),
                     backend: "ollama".to_string(),
@@ -166,10 +196,11 @@ fn detect_ollama() -> RuntimeStatus {
                         .size
                         .map(format_bytes)
                         .unwrap_or_else(|| "Installed".to_string()),
-                    context_length: ollama_model_context_length(&tag.name),
-                })
-                .collect(),
-        ),
+                    context_length: context_lengths.get(index).copied().flatten(),
+                    })
+                    .collect(),
+            )
+        }
         Some(Err(_)) => (
             false,
             "Server responded with an unexpected response".to_string(),
