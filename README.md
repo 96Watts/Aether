@@ -92,12 +92,6 @@ When a signed update is available, Settings > About can install it and relaunch 
 
 Current application version: **1.1.1**
 
-Before the first release, configure these GitHub Actions repository secrets:
-
-- `TAURI_SIGNING_PRIVATE_KEY`
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-- `TAURI_SIGNING_PUBLIC_KEY`
-
 Prepare a semantic-version release locally:
 
 ```powershell
