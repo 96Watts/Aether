@@ -51,7 +51,7 @@ Local conversation and settings files are readable by users with access to the c
 The application currently targets **Windows x64**. The recommended distribution is the Tauri NSIS installer:
 
 ```text
-Aether_1.1.0_x64-setup.exe
+Aether_1.1.1_x64-setup.exe
 ```
 
 Released users do not need Node.js, pnpm, Rust, Cargo, Visual Studio, or a development environment. Aether is distributed with its native runtime and application assets.
@@ -90,7 +90,7 @@ https://github.com/96Watts/Aether/releases/latest/download/latest.json
 
 When a signed update is available, Settings > About can install it and relaunch Aether. Automatic updates require a published release and configured signing secrets.
 
-Current application version: **1.1.0**
+Current application version: **1.1.1**
 
 Before the first release, configure these GitHub Actions repository secrets:
 
@@ -116,8 +116,8 @@ git push origin v<version>
 For the current version, the first release command is:
 
 ```powershell
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 The workflow at `.github/workflows/release.yml` builds the signed Windows NSIS installer and publishes the updater metadata and release assets to [GitHub Releases](https://github.com/96Watts/Aether/releases).
