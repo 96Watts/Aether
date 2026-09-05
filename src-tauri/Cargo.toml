@@ -1,6 +1,6 @@
 [package]
 name = "aiinterface"
-version = "1.1.0"
+version = "1.1.1"
 description = "Aether AI workspace"
 authors = ["you"]
 edition = "2021"
