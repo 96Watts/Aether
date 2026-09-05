@@ -8,8 +8,8 @@ Aether is a focused desktop AI client built with **React, TypeScript, Vite, Taur
 
 > **[Visit the Aether website →](https://96watts.github.io/Aethers/)**<br>
 > Download Aether, view installation options, and learn more about the workspace.
->
-> **if there are any bugs found please message me**
+
+ **if there are any bugs found please message me**
 
 ## Features
 
