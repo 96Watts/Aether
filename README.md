@@ -8,15 +8,12 @@ Aether is a focused desktop AI client built with **React, TypeScript, Vite, Taur
 
 ## Features
 
-- Chat with local Ollama models or supported cloud APIs
-- Stream responses and preserve conversations locally
-- Edit messages and regenerate responses
-- Organize conversations into folders
-- Discover available local runtimes and models
+- Use local Ollama models or cloud-based AI services
+- Discover local runtimes and installed models
 - Connect to OpenAI, OpenRouter, and custom OpenAI-compatible APIs
-- Store provider credentials securely through the Windows credential manager
-- Customize the appearance and behavior of the workspace
-- Install signed application updates from GitHub Releases
+- Keep conversations and settings stored locally
+- Store provider credentials securely through Windows Credential Manager
+- Install signed updates directly from GitHub Releases
 
 ## AI Providers
 
