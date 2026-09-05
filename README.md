@@ -111,20 +111,15 @@ Before the first release, configure these GitHub repository secrets:
 
 ## Current Limitations
 
-The following features are incomplete or not implemented:
+Current limitations include:
 
-- Full Markdown rendering and syntax highlighting
-- Attachments
-- Model downloading
-- Runtime installation
-- LM Studio inference; only detection and model discovery are implemented
-- Standalone GGUF/llama.cpp inference; only file scanning is implemented
-- Anthropic inference
-- Vision and tool calling
-- Some advanced model parameters, including CPU/GPU preference and thread count
-- Telemetry and analytics
-- A published updater release and signed public updater artifacts
-- Windows ARM64, macOS, Linux, and mobile release packages
+- Only Ollama and OpenAI-compatible APIs are supported. Other provider protocols are not supported yet.
+- Attachments, model downloading, and runtime installation are not implemented.
+- LM Studio and standalone GGUF/llama.cpp runtimes can be detected, but are not connected to chat inference.
+- Full Markdown rendering, vision, tool calling, and some advanced model parameters are not implemented.
+- Telemetry and analytics are not implemented.
+- Automatic updates require a published signed release.
+- The current release targets Windows x64 only.
 
 The app's feedback controls are currently local UI state and are not submitted to a service.
 
