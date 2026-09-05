@@ -43,6 +43,10 @@ jobs:
           releaseBody: Signed Windows updater release for Aether.
           releaseDraft: false
           prerelease: false
+          args: --bundles nsis
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
+          updaterJsonPreferNsis: true
       - name: Publish installer checksum and bootstrap script
         shell: pwsh
         env:
