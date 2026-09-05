@@ -1,4 +1,4 @@
-**Copyright © 2026 96Watts. All rights reserved.**
+#**Copyright © 2026 96Watts. All rights reserved.**
 
 Aether is proprietary software.
 
@@ -11,4 +11,4 @@ This repository may be publicly viewable on GitHub, but public visibility does n
 Third-party libraries, frameworks, services, and other dependencies included or used by Aether remain subject to their respective licenses and terms.
 
 Copyright holder: 96Watts
-Year: 2026 
+Year: 2026 #
