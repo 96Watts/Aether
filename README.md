@@ -15,7 +15,7 @@ Aether is a focused desktop AI client built with **React, TypeScript, Vite, Taur
 - Discover local runtimes and installed models
 - Connect to OpenAI, OpenRouter, and custom OpenAI-compatible APIs
 - Keep conversations and settings stored locally
-- Store provider credentials securely through Windows Credential Manager
+- Store provider credentials securely through Windows Credential Manager 
 - Install signed updates from GitHub Releases
 
 ## AI Providers
