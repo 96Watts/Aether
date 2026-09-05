@@ -105,7 +105,7 @@ Current application version: **1.1.1**
 Feedback controls currently remain local UI state and are not submitted to a service.
 
 ## License
-
+**Copyright © 2026 96Watts. All rights reserved.**
 Aether currently has **no selected license**. The repository contains no `LICENSE`, `COPYING`, or equivalent license file. Until a license is added, do not assume that the source code may be reused, modified, or redistributed.
 
 ## Technology
