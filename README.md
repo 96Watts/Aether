@@ -1,0 +1,205 @@
+# Aether
+
+**A modern Windows desktop AI workspace for local and cloud-based AI models.**
+
+Aether is a focused desktop AI client built with **React, TypeScript, Vite, Tauri 2, and Rust**. It connects to locally hosted models through Ollama and to supported OpenAI-compatible APIs, while keeping application settings and conversations on the user's computer.
+
+> Aether is the user-facing product name. The internal Tauri application identifier is `aiinterface`.
+
+## Features
+
+- Stream AI responses and cancel generation in progress
+- Edit user messages and retry assistant responses
+- Copy and share responses
+- Create, rename, duplicate, delete, and organize conversations
+- Group conversations into folders with customizable icons
+- Discover local runtimes and installed models
+- Connect to Ollama, OpenAI, OpenRouter, and custom OpenAI-compatible APIs
+- Store provider credentials through the Windows credential manager
+- Customize themes, accent colors, font size, density, message width, and chat behavior
+- Browse configured model and download directories
+- View system information and optional debug logs
+- Use native Windows file and folder dialogs
+- Check for and install signed application updates
+
+## AI Providers
+
+### Ollama
+
+Aether can connect to an Ollama installation running locally at `http://127.0.0.1:11434`. This supports locally installed models, streaming responses, cancellation, and provider-supplied reasoning output.
+
+Aether does not install Ollama, download models, or start the Ollama service. Ollama and the desired model must already be installed and running.
+
+### OpenAI
+
+Aether supports OpenAI's API through its OpenAI-compatible client. An OpenAI API key is required.
+
+### OpenRouter
+
+Aether supports OpenRouter through its OpenAI-compatible API. An OpenRouter API key is required.
+
+### Custom OpenAI-Compatible APIs
+
+Aether can connect to other endpoints that implement the OpenAI chat-completions and model-list APIs. Custom endpoints are configured in Settings.
+
+## Privacy and Data
+
+Aether is designed for local-first use:
+
+- Conversations are stored locally as JSON files.
+- Application settings are stored locally.
+- Provider API keys are stored through the Windows operating system credential manager.
+- Aether does not operate a remote conversation database or analytics backend.
+
+When a cloud provider is selected, prompts and conversation context are sent to that provider according to its service and privacy policies. Local Ollama usage can remain on the computer.
+
+Conversation and settings files are readable local files. They are not encrypted by Aether.
+
+## Windows Support
+
+The current release targets **Windows x64**. The recommended distribution is the Tauri NSIS installer:
+
+```text
+Aether_1.1.0_x64-setup.exe
+```
+
+Released users do not need Node.js, pnpm, Rust, Cargo, Visual Studio, or a development environment. Aether is packaged with its native application runtime and assets.
+
+There is currently no published macOS, Linux, ARM64, or mobile release workflow.
+
+## Installation
+
+Download the latest Windows installer from the [Aether GitHub Releases](https://github.com/96Watts/Aether/releases) page, run the `Aether_<version>_x64-setup.exe` file, and follow the installation prompts.
+
+After a release containing `install-release.ps1` has been published, Windows PowerShell users can install the latest release with:
+
+```powershell
+irm https://github.com/96Watts/Aether/releases/latest/download/install-release.ps1 | iex
+```
+
+The installer script downloads the official x64 installer from this repository and verifies its SHA-256 checksum before launching it.
+
+## Development
+
+### Requirements
+
+Development requires:
+
+- Node.js
+- pnpm
+- Rust and Cargo
+- Tauri 2 Windows prerequisites
+- WebView2 on Windows
+
+### Install dependencies
+
+```powershell
+pnpm install
+```
+
+### Start the frontend
+
+```powershell
+pnpm dev
+```
+
+### Start Aether in development mode
+
+```powershell
+pnpm tauri dev
+```
+
+### Build the frontend
+
+```powershell
+pnpm build
+```
+
+### Build the Windows application and installers
+
+```powershell
+pnpm tauri build
+```
+
+The Tauri build runs the frontend build automatically and writes release outputs below `src-tauri/target/release/`.
+
+### Run checks
+
+```powershell
+cargo check --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml
+node src/conversationState.test.mjs
+```
+
+## Build Outputs
+
+The current version is **1.1.0**. A production build produces:
+
+```text
+src-tauri/target/release/aiinterface.exe
+src-tauri/target/release/bundle/nsis/Aether_1.1.0_x64-setup.exe
+src-tauri/target/release/bundle/msi/Aether_1.1.0_x64_en-US.msi
+```
+
+The NSIS installer is the recommended file for normal Windows distribution. The MSI is available for environments that require MSI deployment.
+
+Frontend assets are written to `dist/` with content-hashed filenames that may change between builds.
+
+## Updates and Releases
+
+Aether uses Tauri's official updater infrastructure. Production updater configuration requires a public signing key and an HTTPS GitHub Releases endpoint. Private signing keys must remain in GitHub Actions secrets.
+
+The updater endpoint is:
+
+```text
+https://github.com/96Watts/Aether/releases/latest/download/latest.json
+```
+
+The application checks this endpoint asynchronously. When a signed release is available, Settings > About can download and install it, then relaunch Aether. The first release must be published before automatic updates can operate.
+
+Prepare a semantic-version release with:
+
+```powershell
+pnpm release:prepare
+```
+
+This analyzes Git history, selects a PATCH, MINOR, or MAJOR bump, synchronizes the version into `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, and does not tag or publish automatically.
+
+The release workflow is located at `.github/workflows/release.yml`.
+
+Before the first release, configure these GitHub repository secrets:
+
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+- `TAURI_SIGNING_PUBLIC_KEY`
+
+## Current Limitations
+
+The following features are incomplete or not implemented:
+
+- Full Markdown rendering and syntax highlighting
+- Attachments
+- Model downloading
+- Runtime installation
+- LM Studio inference; only detection and model discovery are implemented
+- Standalone GGUF/llama.cpp inference; only file scanning is implemented
+- Anthropic inference
+- Vision and tool calling
+- Some advanced model parameters, including CPU/GPU preference and thread count
+- Telemetry and analytics
+- A published updater release and signed public updater artifacts
+- Windows ARM64, macOS, Linux, and mobile release packages
+
+The app's feedback controls are currently local UI state and are not submitted to a service.
+
+## License
+
+No license has been selected for Aether yet. The repository currently contains no `LICENSE`, `COPYING`, or equivalent license file. Until a license is added, do not assume that the source code may be reused, modified, or redistributed.
+
+## Technology
+
+- **React** and **TypeScript** for the user interface
+- **Vite** for frontend development and bundling
+- **Tauri 2** for the desktop shell and native integration
+- **Rust** for persistence, runtime discovery, AI requests, credential storage, and system integration
+- **Ollama** and OpenAI-compatible APIs for model access

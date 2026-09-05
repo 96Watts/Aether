@@ -1,0 +1,57 @@
+name: Release Aether
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify release tag matches application version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} does not match package version $version" }
+      - name: Configure signed updater
+        shell: pwsh
+        env:
+          AETHER_UPDATE_ENDPOINT: https://github.com/96Watts/Aether/releases/latest/download/latest.json
+          TAURI_SIGNING_PUBLIC_KEY: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+        run: node scripts/configure-updater.mjs
+      - name: Build and publish Tauri release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Aether ${{ github.ref_name }}
+          releaseBody: Signed Windows updater release for Aether.
+          releaseDraft: false
+          prerelease: false
+      - name: Publish installer checksum and bootstrap script
+        shell: pwsh
+        env:
+          REPOSITORY: 96Watts/Aether
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $assets = Get-ChildItem src-tauri/target/release/bundle -Recurse -File | Where-Object { $_.Name -match '_x64-setup\.exe$' }
+          if (-not $assets) { throw 'No Windows NSIS installer was produced.' }
+          $hash = Get-FileHash $assets[0].FullName -Algorithm SHA256
+          "$($hash.Hash)  $($assets[0].Name)" | Set-Content SHA256SUMS.txt
+          Copy-Item install.ps1 install-release.ps1
+          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt install-release.ps1 --clobber

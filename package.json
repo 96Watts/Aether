@@ -1,0 +1,40 @@
+{
+  "name": "aiinterface",
+  "private": true,
+  "version": "1.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/96Watts/Aether.git"
+  },
+  "homepage": "https://github.com/96Watts/Aether",
+  "bugs": {
+    "url": "https://github.com/96Watts/Aether/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/check-version.mjs && tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "release:prepare": "node scripts/release.mjs prepare",
+    "release:publish": "node scripts/release.mjs publish"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.3",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-process": "^2",
+    "@tauri-apps/plugin-updater": "^2",
+    "lucide-react": "^1.39.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16"
+  }
+}
