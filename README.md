@@ -92,30 +92,6 @@ When a signed update is available, Settings > About can install it and relaunch 
 
 Current application version: **1.1.1**
 
-Prepare a semantic-version release locally:
-
-```powershell
-pnpm release:prepare
-```
-
-This analyzes Git history, chooses a PATCH, MINOR, or MAJOR bump, synchronizes the version across the project, and does not tag or publish automatically.
-
-After reviewing and committing the changes, publish a release tag:
-
-```powershell
-git tag v<version>
-git push origin v<version>
-```
-
-For the current version, the first release command is:
-
-```powershell
-git tag v1.1.1
-git push origin v1.1.1
-```
-
-The workflow at `.github/workflows/release.yml` builds the signed Windows NSIS installer and publishes the updater metadata and release assets to [GitHub Releases](https://github.com/96Watts/Aether/releases).
-
 ## Current Limitations
 
 - Only Ollama and OpenAI-compatible APIs are supported. Other provider protocols are not supported yet.
